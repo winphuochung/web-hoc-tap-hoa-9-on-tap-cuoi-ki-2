@@ -1476,6 +1476,7 @@ var QUESTIONS = [
     exp:"CO₂ và CH₄ là hai khí nhà kính chính gây hiệu ứng nhà kính và sự ấm lên toàn cầu." }
 ];
 var answers = new Array(QUESTIONS.length).fill(-1);
+var quizStartTime = null, scoreSent = false;
 var quizBox = document.getElementById("quizBox");
 var LETTERS = ["A","B","C","D"];
 
@@ -1503,6 +1504,7 @@ function buildQuiz(){
       b.addEventListener("click", function(){
         if (quizSubmitted) return;
         answers[qi] = oi;
+        if (quizStartTime === null) quizStartTime = Date.now();
         opts.querySelectorAll(".opt").forEach(function(x){ x.classList.remove("sel"); });
         b.classList.add("sel");
         updateAnswered();
@@ -1557,6 +1559,15 @@ function doSubmit(){
     ? "🎉 Xuất sắc! Em đạt " + score + "/10 điểm. Em đã nắm chắc kiến thức Bài 29–35 rồi — tự tin bước vào bài kiểm tra cuối kì II nhé!"
     : "Em đạt " + score + "/10 điểm. Hãy xem lại phần giải thích ở các câu chưa đúng rồi làm lại nhé!";
   banner.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (!scoreSent) {
+    scoreSent = true;
+    try {
+      var secs = Math.max(0, Math.round((Date.now() - (quizStartTime || Date.now())) / 1000));
+      var dur = Math.floor(secs / 60) + " phút " + (secs % 60) + " giây";
+      var detail = QUESTIONS.map(function(item, qi){ return (qi + 1) + ": " + (answers[qi] < 0 ? "-" : LETTERS[answers[qi]]) + "/" + LETTERS[item.ans]; }).join(", ");
+      fetch("https://script.google.com/macros/s/AKfycbz_jG1nguWX_SI_HNShGg8IrHFykmG__jWmaWye4jB2CSMIg_BhbcqDJg7LD4tHO6WAtQ/exec", {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body: JSON.stringify({name: currentStudent.name, className: currentStudent.cls, score: score, correct: score, detail: detail, duration: dur})}).catch(function(){});
+    } catch (e) {}
+  }
 }
 var quizModal = document.getElementById("quizModal");
 document.getElementById("submitQuiz").addEventListener("click", function(){
@@ -1579,6 +1590,7 @@ document.getElementById("confirmSubmit").addEventListener("click", function(){
 document.getElementById("resetQuiz").addEventListener("click", function(){
   answers = new Array(QUESTIONS.length).fill(-1);
   quizSubmitted = false;
+  scoreSent = false; quizStartTime = null;
   buildQuiz();
   updateAnswered();
   var banner = document.getElementById("scoreBanner");
@@ -1604,6 +1616,7 @@ function enterApp(){
   document.getElementById("bestScore").textContent = bestScore === null ? "—" : bestScore + "/10";
   answers = new Array(QUESTIONS.length).fill(-1);
   quizSubmitted = false;
+  scoreSent = false; quizStartTime = null;
   buildQuiz();
   updateAnswered();
   var banner = document.getElementById("scoreBanner");
